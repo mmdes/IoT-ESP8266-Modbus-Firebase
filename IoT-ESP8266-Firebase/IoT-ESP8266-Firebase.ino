@@ -40,14 +40,13 @@ void setup() {
 //definição de algumas variáveis 
 int n = 0;
 
-float corrente1 = -1.0;
-float corrente2 = -1.0;
-float corrente3 = -1.0;
-float corrente4 = -1.0;
+float ar1_fase1 = -1.0;
+float ar1_fase2 = -1.0;
+float ar2_fase1 = -1.0;
+float ar2_fase2 = -1.0;
+
 
 void loop() {
-
-
   //Registro [0]
   uint16_t data;
 
@@ -55,61 +54,61 @@ void loop() {
   //Serial.println("REG[1]");                        
   //Serial.println(node.getResponseBuffer(0));        
   //delay(500);
-  corrente1 = node.getResponseBuffer(0);
+  ar1_fase1 = node.getResponseBuffer(0);
   // Passando valor
-  Firebase.setFloat("corrente1", corrente1);
+  Firebase.setFloat("ar1_fase1", ar1_fase1);
   // Captura erro
   if (Firebase.failed()) {
       Serial.print("setting /number failed:");
       Serial.println(Firebase.error());  
       return;
   }else{
-    Serial.print("setting corrente1: ");
-    Serial.println(corrente1);
+    Serial.print("setting ar1_fase1: ");
+    Serial.println(ar1_fase1);
   }
   delay(1000);
   node.clearResponseBuffer();
 
   //enviando um valor aleatório ao firebase somente para testes
-  corrente2 = n + 2.2;
-  Firebase.setFloat("corrente2", corrente2);
+  ar1_fase2 = n + 2.2;
+  Firebase.setFloat("ar1_fase2", ar1_fase2);
   // Captura erro
   if (Firebase.failed()) {
       Serial.print("setting /number failed:");
       Serial.println(Firebase.error());  
       return;
   }else{
-    Serial.print("setting corrente2: ");
-    Serial.println(corrente2);
+    Serial.print("setting ar1_fase2: ");
+    Serial.println(ar1_fase2);
   }
   delay(1000);
 
 
   //enviando um valor aleatório ao firebase somente para testes
-  corrente3 = n + 3.3;
-  Firebase.setFloat("corrente3", corrente3);
+  ar2_fase1 = n + 3.3;
+  Firebase.setFloat("ar2_fase1", ar2_fase1);
   // Captura erro
   if (Firebase.failed()) {
       Serial.print("setting /number failed:");
       Serial.println(Firebase.error());  
       return;
   }else{
-    Serial.print("setting corrente3: ");
-    Serial.println(corrente3);
+    Serial.print("setting ar2_fase1: ");
+    Serial.println(ar2_fase1);
   }
   delay(1000);
 
   //enviando um valor aleatório ao firebase somente para testes
-  corrente4 = n + 3.4;
-  Firebase.setFloat("corrente4", corrente4);
+  ar2_fase2 = n + 3.4;
+  Firebase.setFloat("ar2_fase2", ar2_fase2);
   // Captura erro
   if (Firebase.failed()) {
       Serial.print("setting /number failed:");
       Serial.println(Firebase.error());  
       return;
   }else{
-    Serial.print("setting corrente4: ");
-    Serial.println(corrente4);
+    Serial.print("setting ar2_fase2: ");
+    Serial.println(ar2_fase2);
   }
   delay(1000);
 
