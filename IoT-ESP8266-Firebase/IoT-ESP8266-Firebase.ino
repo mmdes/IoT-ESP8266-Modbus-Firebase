@@ -1,16 +1,26 @@
+//Inclusão de bibliotecas
+#include <ModbusMaster232.h> //ModbusMaster RTU pins   D7(13), D8(15)   RX, TX  RO,DI
 #include <ESP8266WiFi.h>
 #include <FirebaseArduino.h>
 
+//Declaracoes do modbus
+#define TX_ENABLE_PIN D6                //Definição de pino enable
+ModbusMaster232 node(1, TX_ENABLE_PIN); //Buscando no slave id=1
+#define BAUD_RATE_MODBUS 9600           //BaudRate
+
 // Definição do host e da chave do Firebase
-#define FIREBASE_HOST ""
-#define FIREBASE_AUTH ""
+#define FIREBASE_HOST "seu-host"
+#define FIREBASE_AUTH "sua-chave"
 
 //Definição rede a se conectar
-#define WIFI_SSID ""
-#define WIFI_PASSWORD ""
+#define WIFI_SSID "sua-rede"
+#define WIFI_PASSWORD "senha-da-rede"
 
 void setup() {
   Serial.begin(9600);
+
+  //Setup inicial do modbus
+  node.begin(BAUD_RATE_MODBUS); 
 
   //Conecta ao wifi
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -27,12 +37,25 @@ void setup() {
   Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
 }
 
+//definição de algumas variáveis 
 int n = 0;
+
+float corrente1 = -1.0;
+float corrente2 = -1.0;
+float corrente3 = -1.0;
+float corrente4 = -1.0;
 
 void loop() {
 
 
-  float corrente1 = n + 1;
+  //Registro [0]
+  uint16_t data;
+
+  node.readHoldingRegisters(1, 1);
+  //Serial.println("REG[1]");                        
+  //Serial.println(node.getResponseBuffer(0));        
+  //delay(500);
+  corrente1 = node.getResponseBuffer(0);
   // Passando valor
   Firebase.setFloat("corrente1", corrente1);
   // Captura erro
@@ -40,49 +63,66 @@ void loop() {
       Serial.print("setting /number failed:");
       Serial.println(Firebase.error());  
       return;
+  }else{
+    Serial.print("setting corrente1: ");
+    Serial.println(corrente1);
   }
   delay(1000);
+  node.clearResponseBuffer();
 
-  
-  float corrente2 = n + 2.2;
+  //enviando um valor aleatório ao firebase somente para testes
+  corrente2 = n + 2.2;
   Firebase.setFloat("corrente2", corrente2);
   // Captura erro
   if (Firebase.failed()) {
       Serial.print("setting /number failed:");
       Serial.println(Firebase.error());  
       return;
+  }else{
+    Serial.print("setting corrente2: ");
+    Serial.println(corrente2);
   }
   delay(1000);
 
 
-  float corrente3 = n + 3.3;
+  //enviando um valor aleatório ao firebase somente para testes
+  corrente3 = n + 3.3;
   Firebase.setFloat("corrente3", corrente3);
   // Captura erro
   if (Firebase.failed()) {
       Serial.print("setting /number failed:");
       Serial.println(Firebase.error());  
       return;
+  }else{
+    Serial.print("setting corrente3: ");
+    Serial.println(corrente3);
   }
   delay(1000);
 
-
-  float corrente4 = n + 3.4;
+  //enviando um valor aleatório ao firebase somente para testes
+  corrente4 = n + 3.4;
   Firebase.setFloat("corrente4", corrente4);
   // Captura erro
   if (Firebase.failed()) {
       Serial.print("setting /number failed:");
       Serial.println(Firebase.error());  
       return;
+  }else{
+    Serial.print("setting corrente4: ");
+    Serial.println(corrente4);
   }
   delay(1000);
 
 
+  //somente para enviar alguns valores aleatórios ao firebase
   if(n<=20){
     n++;
   }else{
     n = 0;  
   }
   
+
+  //***********ALGUNS EXEMPLOS PARA TRABALHAR COM DADOS USANDO FIREBASE **********
 
   /*
   // Atualiza valor
