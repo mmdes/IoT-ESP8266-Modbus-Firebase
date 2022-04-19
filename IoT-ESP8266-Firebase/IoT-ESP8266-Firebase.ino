@@ -66,8 +66,9 @@ void loop() {
     Serial.print("setting ar1_fase1: ");
     Serial.println(ar1_fase1);
   }
-  delay(1000);
   node.clearResponseBuffer();
+  delay(1000);
+  
 
   //enviando um valor aleatório ao firebase somente para testes
   ar1_fase2 = n + 2.2;
