@@ -9,12 +9,12 @@ ModbusMaster232 node(1, TX_ENABLE_PIN); //Buscando no slave id=1
 #define BAUD_RATE_MODBUS 9600           //BaudRate
 
 // Definição do host e da chave do Firebase
-#define FIREBASE_HOST "esp8266-ee575-default-rtdb.firebaseio.com"
-#define FIREBASE_AUTH "Cbrtm3SFK6TGw5f4GUq5yw6rx8C53g1BTHC7Ir7Z"
+#define FIREBASE_HOST ""
+#define FIREBASE_AUTH ""
 
 //Definição rede a se conectar
-#define WIFI_SSID "MS-2.4GHz"
-#define WIFI_PASSWORD "#ThisIsMinexX1"
+#define WIFI_SSID ""
+#define WIFI_PASSWORD ""
 
 void setup() {
   Serial.begin(9600);
