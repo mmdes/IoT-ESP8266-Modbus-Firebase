@@ -9,12 +9,12 @@ ModbusMaster232 node(1, TX_ENABLE_PIN); //Buscando no slave id=1
 #define BAUD_RATE_MODBUS 9600           //BaudRate
 
 // Definição do host e da chave do Firebase
-#define FIREBASE_HOST ""
-#define FIREBASE_AUTH ""
+#define FIREBASE_HOST "firebase-host"
+#define FIREBASE_AUTH "firebase-key"
 
 //Definição rede a se conectar
-#define WIFI_SSID ""
-#define WIFI_PASSWORD ""
+#define WIFI_SSID "sua-rede"
+#define WIFI_PASSWORD "sua-senha"
 
 void setup() {
   Serial.begin(9600);
