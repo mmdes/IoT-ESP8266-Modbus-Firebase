@@ -1,124 +1,173 @@
 //Inclusão de bibliotecas
-#include <ModbusMaster232.h> //ModbusMaster RTU pins   D7(13), D8(15)   RX, TX  RO,DI
+#include <Arduino.h>
 #include <ESP8266WiFi.h>
-#include <FirebaseArduino.h>
+#include <Firebase_ESP_Client.h>
+#include <Wire.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+//#include <ModbusMaster232.h> //ModbusMaster RTU pins   D7(13), D8(15)   RX, TX  RO,DI
+
+// Provide the token generation process info.
+#include "addons/TokenHelper.h"
+// Provide the RTDB payload printing info and other helper functions.
+#include "addons/RTDBHelper.h"
 
 //Declaracoes do modbus
 #define TX_ENABLE_PIN D6                //Definição de pino enable
-ModbusMaster232 node(1, TX_ENABLE_PIN); //Buscando no slave id=1
+//ModbusMaster232 sensor(1, TX_ENABLE_PIN); //Buscando no slave id=1
 #define BAUD_RATE_MODBUS 9600           //BaudRate
 
-// Definição do host e da chave do Firebase
-#define FIREBASE_HOST "firebase-host"
-#define FIREBASE_AUTH "firebase-key"
+// Definição da URL do banco e da chave do projeto no Firebase
+#define DATABASE_URL "teste-dbfb9-default-rtdb.firebaseio.com/"
+#define API_KEY "AIzaSyDyONlDPSYitp_WKjODZdSWR8Wmmuii3eA"
+
+// Insere email e senha autorizados
+#define USER_EMAIL "mateusreis.ufmt@gmail.com"
+#define USER_PASSWORD "testeesp"
 
 //Definição rede a se conectar
-#define WIFI_SSID "sua-rede"
-#define WIFI_PASSWORD "senha-rede"
+#define WIFI_SSID "Iris"
+#define WIFI_PASSWORD "1r1s@001"
+
+// Define Objetos do Firebase
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+
+// Variável para armazenar o USER UID
+String uid;
+
+// Database main path (Caminho para salvar os dados que será atualizado com USER UID)
+String databasePath;
+
+// Database child nodes
+String sala1_ar1_fase1_Path = "/sala1_ar1_fase1";
+String sala1_ar1_fase2_Path = "/sala1_ar1_fase2";
+
+// Parent Node (to be updated in every loop)
+String parentPath;
+FirebaseJson json;
+
+// Variavél para salvar numeros aleatórios
+long randNumber;
+
+// Define um Servidor NTP para pegar o timestamp
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org");
+
+// Variável para salvar o timestamp
+int timestamp;
+
+// Variáveis de tempo (Envia nova leitura a cada 1 segundo)
+unsigned long sendDataPrevMillis = 0;
+unsigned long timerDelay = 1000;
+
+
+// Inicializa o Wifi
+void initWiFi() {
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("Connecting to WiFi ..");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print('.');
+    delay(1000);
+  }
+  Serial.println(WiFi.localIP());
+  Serial.println();
+}
+
+// Função para pegar o tempo do servidor NTP
+unsigned long getTime() {
+  timeClient.update();
+  unsigned long now = timeClient.getEpochTime();
+  return now;
+}
 
 void setup() {
-  Serial.begin(9600);
-
+  Serial.begin(115200);
+  
+  initWiFi();
+  
+  timeClient.begin();
+  
   //Setup inicial do modbus
-  node.begin(BAUD_RATE_MODBUS); 
+  //node.begin(BAUD_RATE_MODBUS);
 
-  //Conecta ao wifi
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Conectando");
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(500);
-  }
-  Serial.println();
-  Serial.print("conectado: ");
-  Serial.println(WiFi.localIP());
+  // autenticação no Firebase Real Time Database
+  config.api_key = API_KEY;
+  auth.user.email = USER_EMAIL;
+  auth.user.password = USER_PASSWORD;
+  config.database_url = DATABASE_URL;
+  Firebase.reconnectWiFi(true);
+  fbdo.setResponseSize(4096);
+
+  // Assign the callback function for the long running token generation task */
+  config.token_status_callback = tokenStatusCallback; //see addons/TokenHelper.h
+
+  // Assign the maximum retry of token generation
+  config.max_token_generation_retry = 5;
 
   //Conecta ao Firebase
-  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+  Firebase.begin(&config, &auth);
+
+  // Pega o User UID
+  Serial.println("Getting User UID");
+  while ((auth.token.uid) == "") {
+    Serial.print('.');
+    delay(1000);
+  }
+
+  // Printa o User UID
+  uid = auth.token.uid.c_str();
+  Serial.print("User UID: ");
+  Serial.println(uid);
+
+  // Atualiza o caminho para salvar as leituras
+  databasePath = "/UsersData/" + uid + "/readings";
+  
 }
 
 //definição de algumas variáveis 
-int n = 0;
+//float ar1_fase1 = -1.0;
+//float ar1_fase2 = -1.0;
 
-float ar1_fase1 = -1.0;
-float ar1_fase2 = -1.0;
-float ar2_fase1 = -1.0;
-float ar2_fase2 = -1.0;
+
 
 
 void loop() {
-  //Registro [0]
-  //uint16_t data;
 
-  node.readHoldingRegisters(1, 1);
-  //Serial.println("REG[1]");                        
-  //Serial.println(node.getResponseBuffer(0));        
-  //delay(500);
-  ar1_fase1 = node.getResponseBuffer(0);
-  // Passando valor
-  Firebase.setFloat("ar1_fase1", ar1_fase1);
-  // Captura erro
-  if (Firebase.failed()) {
-      Serial.print("setting /number failed:");
-      Serial.println(Firebase.error());  
-      return;
-  }else{
-    Serial.print("setting ar1_fase1: ");
-    Serial.println(ar1_fase1);
-  }
-  node.clearResponseBuffer();
-  delay(1000);
-  
+  if (Firebase.ready() && (millis() - sendDataPrevMillis > timerDelay || sendDataPrevMillis == 0)){
+    sendDataPrevMillis = millis();
 
-  //enviando um valor aleatório ao firebase somente para testes
-  ar1_fase2 = n + 2.2;
-  Firebase.setFloat("ar1_fase2", ar1_fase2);
-  // Captura erro
-  if (Firebase.failed()) {
-      Serial.print("setting /number failed:");
-      Serial.println(Firebase.error());  
-      return;
-  }else{
-    Serial.print("setting ar1_fase2: ");
-    Serial.println(ar1_fase2);
-  }
-  delay(1000);
+    //Get current timestamp
+    timestamp = getTime();
+    Serial.print ("time: ");
+    Serial.println (timestamp);
+    parentPath = databasePath + "/" + String(timestamp);
+
+    // leitura do canal A
+    //node.readHoldingRegisters(8, 1);
+    //delay(500);
+    //ar1_fase1 = node.getResponseBuffer(0);
+    
+    randNumber = random(15);
+    //ar1_fase1 = randNumber/10.0F;
+    
+    json.set(sala1_ar1_fase1_Path.c_str(), String(randNumber/10.0F));
 
 
-  //enviando um valor aleatório ao firebase somente para testes
-  ar2_fase1 = n + 3.3;
-  Firebase.setFloat("ar2_fase1", ar2_fase1);
-  // Captura erro
-  if (Firebase.failed()) {
-      Serial.print("setting /number failed:");
-      Serial.println(Firebase.error());  
-      return;
-  }else{
-    Serial.print("setting ar2_fase1: ");
-    Serial.println(ar2_fase1);
-  }
-  delay(1000);
+    // leitura do canal B
+    //node.readHoldingRegisters(16, 1);
+    //delay(500);
+    //ar1_fase2 = node.getResponseBuffer(0);
+    
+    //randNumber = random(15);
+    //ar1_fase2 = randNumber/5.0F;
+    
+    json.set(sala1_ar1_fase2_Path.c_str(), String(randNumber/5.0F));
 
-  //enviando um valor aleatório ao firebase somente para testes
-  ar2_fase2 = n + 3.4;
-  Firebase.setFloat("ar2_fase2", ar2_fase2);
-  // Captura erro
-  if (Firebase.failed()) {
-      Serial.print("setting /number failed:");
-      Serial.println(Firebase.error());  
-      return;
-  }else{
-    Serial.print("setting ar2_fase2: ");
-    Serial.println(ar2_fase2);
-  }
-  delay(1000);
-
-
-  //somente para enviar alguns valores aleatórios ao firebase
-  if(n<=20){
-    n++;
-  }else{
-    n = 0;  
+    //json.set("/timestamp", String(timestamp));
+    
+    Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
   }
   
 
