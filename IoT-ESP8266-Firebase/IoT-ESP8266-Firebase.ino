@@ -1,5 +1,5 @@
 //Inclusão de bibliotecas
-#include <Arduino.h>
+//#include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <Firebase_ESP_Client.h>
 #include <Wire.h>
@@ -26,8 +26,12 @@
 #define USER_PASSWORD "testeesp"
 
 //Definição rede a se conectar
-#define WIFI_SSID "Iris"
-#define WIFI_PASSWORD "1r1s@001"
+//#define WIFI_SSID "POCO X3 Pro"
+//#define WIFI_PASSWORD "dev8765@"
+
+#define WIFI_SSID "VIVOFIBRA-16A1"
+#define WIFI_PASSWORD "aayuTarsba"
+
 
 // Define Objetos do Firebase
 FirebaseData fbdo;
@@ -126,10 +130,15 @@ void setup() {
   
 }
 
+#define LEITURAS 10
+float soma;
+int vector[LEITURAS];
+
 //definição de algumas variáveis 
 //float ar1_fase1 = -1.0;
 //float ar1_fase2 = -1.0;
-
+int pos;
+float media = 0;
 
 
 
@@ -150,9 +159,11 @@ void loop() {
     //ar1_fase1 = node.getResponseBuffer(0);
     
     randNumber = random(15);
+
+    vector[pos] = randNumber;
     //ar1_fase1 = randNumber/10.0F;
     
-    json.set(sala1_ar1_fase1_Path.c_str(), String(randNumber/10.0F));
+    //json.set(sala1_ar1_fase1_Path.c_str(), String(randNumber/10.0F));
 
 
     // leitura do canal B
@@ -162,12 +173,31 @@ void loop() {
     
     //randNumber = random(15);
     //ar1_fase2 = randNumber/5.0F;
+    pos += 1;
+    if (pos > (LEITURAS - 1)){
+        soma = 0;
+        pos = 0;
+        media = 0;
+        for (int i = 0; i < LEITURAS; i++){
+          soma = soma +  vector[i];
+          vector[i] = 0;
+        }
+     
+        Serial.println("Soma");
+        Serial.println(soma);
+        
+        Serial.println("Média");
+        media = soma / LEITURAS;
+        json.set(sala1_ar1_fase2_Path.c_str(), String(media));
+        Serial.println(media);
+        Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
+    }
     
-    json.set(sala1_ar1_fase2_Path.c_str(), String(randNumber/5.0F));
+   
 
     //json.set("/timestamp", String(timestamp));
     
-    Serial.printf("Set json... %s\n", Firebase.RTDB.setJSON(&fbdo, parentPath.c_str(), &json) ? "ok" : fbdo.errorReason().c_str());
+    
   }
   
 
